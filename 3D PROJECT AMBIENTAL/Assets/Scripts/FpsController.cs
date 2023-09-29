@@ -4,72 +4,43 @@ using UnityEngine;
 
 public class FpsController : MonoBehaviour
 {
-    public bool CanMove { get; private set; } = true;
+    public CharacterController controller;
 
-    [Header("Movement")]
-    [SerializeField] private float walkSpeed;
-    [SerializeField] private float gravity = -8.91f;
+    public float speed = 12f;
+    public float gravity = -9.81f;
+    public float jump = 1f;
 
-    [Header("Look Cam")]
-    [SerializeField, Range(1, 10)] private float lookSpeedX = 2.0f;
-    [SerializeField, Range(1, 10)] private float lookSpeedY = 2.0f;
-    [SerializeField, Range(-90, 0)] private float upLimit = 80.0f;
-    [SerializeField, Range(0, 90)] private float downLimit = 80.0f;
+    public Transform groundCheck;
+    public float groundDistance = 0.4f;
+    public LayerMask groundMask;
 
-    private Camera playerCam;
-    private CharacterController characterController;
-
-    private Vector3 moveDirection;
-    private Vector2 currentInput;
-
-    private float rotationX = 0;
-
-
-    void Awake()
-    {
-        playerCam = GetComponentInChildren<Camera>();
-        characterController = GetComponent<CharacterController>();
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-
-    }
+    Vector3 velocity;
+    bool isGrounded;
 
     // Update is called once per frame
     void Update()
     {
-        if (CanMove)
+        isGrounded = Physics.CheckSphere(groundCheck.position, groundDistance, groundMask);
+
+        if (isGrounded && velocity.y < 0)
         {
-            HandleMovementInput();
-            HandleMouseLook();
-
-            ApplyFinalMovement();
-        }
-    }
-
-    void HandleMovementInput()
-    {
-        currentInput = new Vector2(walkSpeed * Input.GetAxis("Vertical"), walkSpeed * Input.GetAxis("Horizontal"));
-
-        float moveDirectionY = moveDirection.y;
-        moveDirection = (transform.TransformDirection(Vector3.forward) * currentInput.x) + (transform.TransformDirection(Vector3.right) * currentInput.y);
-        moveDirection.y = moveDirectionY;
-    }
-
-    void HandleMouseLook()
-    {
-        rotationX -= Input.GetAxis("Mouse Y") * lookSpeedY;
-        rotationX = Mathf.Clamp(rotationX, upLimit, downLimit);
-        playerCam.transform.localRotation = Quaternion.Euler(rotationX, 0, 0);
-        transform.rotation *= Quaternion.Euler(0,Input.GetAxis("Mouse X")* lookSpeedX,0);
-    }
-
-    void ApplyFinalMovement()
-    {
-        if (!characterController.isGrounded)
-        {
-            moveDirection.y -= gravity * Time.deltaTime;
+            velocity.y = -2f;
         }
 
-        characterController.Move(moveDirection * Time.deltaTime);
+        float x = Input.GetAxis("Horizontal");
+        float z = Input.GetAxis("Vertical");
+
+        Vector3 move = transform.right * x + transform.forward * z;
+
+        controller.Move(move * speed * Time.deltaTime);
+
+        if (Input.GetButtonDown("Jump") && isGrounded)
+        {
+            velocity.y = Mathf.Sqrt(jump * -2f * gravity);
+        }
+
+        velocity.y += gravity * Time.deltaTime;
+
+        controller.Move(velocity * Time.deltaTime);
     }
 }
